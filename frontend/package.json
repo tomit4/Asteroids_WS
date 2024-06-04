@@ -1,0 +1,27 @@
+{
+    "name": "backend",
+    "version": "1.0.0",
+    "main": "index.js",
+    "scripts": {
+        "watch": "tsc -w",
+        "build": "./npm_scripts/build",
+        "dev": "./npm_scripts/dev",
+        "start": "node dist/index.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "@fastify/static": "^7.0.4",
+        "dotenv": "^16.4.5",
+        "fastify": "^4.27.0",
+        "pino-pretty": "^11.1.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.14.1",
+        "ts-node": "^10.9.2",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.4.5"
+    }
+}

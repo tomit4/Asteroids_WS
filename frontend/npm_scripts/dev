@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+cp src/public/index.html dist/public/ &&
+    cp src/public/css/*.css dist/public/css/ &&
+    tsc src/public/js/index.ts --outDir src/public/js --removeComments &&
+    cp src/public/js/*.js dist/public/js/ &&
+    tsnd --watch ./src/public/scripts/index.ts --respawn --transpile-only --exit-child src/index.ts
