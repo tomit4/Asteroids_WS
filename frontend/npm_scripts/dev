@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 
-cp src/public/index.html dist/public/ &&
+if [ ! -d dist ]; then
+    npm run build
+fi
+
+cp src/public/*.html dist/public/ &&
     cp src/public/css/*.css dist/public/css/ &&
-    tsc src/public/js/index.ts --outDir src/public/js --removeComments &&
+    tsc --skipLibCheck --outDir src/public/js --removeComments --target ES6 --module ESNext src/public/js/*.ts &&
     cp src/public/js/*.js dist/public/js/ &&
     tsnd --watch ./src/public/scripts/index.ts --respawn --transpile-only --exit-child src/index.ts

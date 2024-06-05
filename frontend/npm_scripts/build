@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 tsc -p tsconfig.json &&
-    /usr/bin/cp -rn ./src/public/css/ ./dist/public/
+    cp -r ./src/public/css ./dist/public/ &&
+    cp ./src/public/*.html ./dist/public/
