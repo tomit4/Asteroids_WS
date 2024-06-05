@@ -3,9 +3,8 @@
     "version": "1.0.0",
     "main": "index.js",
     "scripts": {
-        "watch": "tsc -w",
+        "dev": "concurrently \"./npm_scripts/dev\" \"tsc --skipLibCheck --outDir src/public/js --removeComments --target ES6 --module ESNext --watch src/public/js/*.ts\" \"browser-sync start --no-notify --browser 'firefox' --proxy 'localhost:5174' --files 'src/public/**/*.*'\"",
         "build": "./npm_scripts/build",
-        "dev": "./npm_scripts/dev",
         "start": "node dist/index.js"
     },
     "keywords": [],
