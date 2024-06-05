@@ -5,6 +5,11 @@ import type {
     FastifyRequest,
     HookHandlerDoneFunction,
 } from 'fastify'
+import type { WebSocket } from '@fastify/websocket'
+
+type Params = {
+    id?: string | null
+}
 
 export default (
     fastify: FastifyInstance,
@@ -13,12 +18,12 @@ export default (
 ) => {
     fastify.route({
         method: 'GET',
-        url: '/',
+        url: '/:id?',
         handler: async (request: FastifyRequest, reply: FastifyReply) => {
             try {
                 reply
-                    .code(200)
-                    .send({ ok: true, message: 'Test Route Hit Succesfully!' })
+                    .code(404)
+                    .send({ ok: false, message: 'http route not found' })
             } catch (error) {
                 if (error instanceof Error)
                     reply.code(500).send({
@@ -29,13 +34,19 @@ export default (
                 return reply
             }
         },
-        wsHandler: (socket, req) => {
-            // this will handle websockets connections
-            socket.send('hello client')
-
-            socket.once('message', chunk => {
-                socket.close()
+        wsHandler: (socket: WebSocket, request: FastifyRequest) => {
+            // TODO: handle user ids on both front and back ends
+            // from user inputted url for now
+            const { id } = request.params as Params
+            console.log('id :=>', id)
+            socket.on('message', chunk => {
+                console.log('message sent from client!! :=>', chunk.toString())
+                socket.send(chunk.toString())
             })
+
+            // TODO: attach to an event
+            // i.e. "close connection button" on frontend
+            // socket.close()
         },
     })
     done()
