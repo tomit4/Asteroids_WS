@@ -1,19 +1,27 @@
 import config from './config.js'
-// TODO: handle user ids on both front and back ends
-// from user inputted url for now
-const socket = new WebSocket(config.ws_main_addr as string)
+let socket = new WebSocket(config.ws_main_addr as string)
 const form: HTMLFormElement = document.getElementById(
     'msgForm',
 ) as HTMLFormElement
+const chat = document.getElementById('chat') as HTMLDivElement
+const message = document.getElementById('inputBox') as HTMLInputElement
+const inputBox = document.getElementById('inputBox') as HTMLElement
 
-socket.addEventListener('open', event => {
+let clientId: string = ''
+
+socket.addEventListener('open', () => {
     console.log('Websocket connection opened')
-    // socket.send('Hello Server!')
 })
 
-// TODO: possibly render newMsg content with new <p> tags here
 socket.onmessage = message => {
-    console.log('Message from server :=>', message.data)
+    const data = JSON.parse(message.data)
+    if (data.type === 'id' && !clientId.length) {
+        clientId = data.id
+    } else {
+        const message = document.createElement('p')
+        message.textContent = `${data.id}: ${data.message}`
+        chat.appendChild(message)
+    }
 }
 
 socket.addEventListener('close', () => {
@@ -22,10 +30,6 @@ socket.addEventListener('close', () => {
 
 form.addEventListener('submit', event => {
     event.preventDefault()
-    const message = document.getElementById('inputBox') as HTMLInputElement
     socket.send(message.value)
-    const newMsg = document.getElementById('newMsg') as HTMLElement
-    newMsg.textContent = message.value
-    const inputBox = document.getElementById('inputBox') as HTMLElement
     inputBox.textContent = ''
 })

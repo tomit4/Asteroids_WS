@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "main": "index.js",
     "scripts": {
-        "dev": "concurrently \"./npm_scripts/dev\" \"tsc --skipLibCheck --outDir src/public/js --removeComments --target ES6 --module ESNext --watch src/public/js/*.ts\" \"browser-sync start --no-notify --browser 'firefox' --proxy 'localhost:5174' --files 'src/public/**/*.*'\"",
+        "dev": "concurrently \"./npm_scripts/dev\" \"tsc --skipLibCheck --outDir src/public/js --removeComments --target ES6 --module ESNext --watch src/public/js/*.ts\" \"browser-sync start --no-ghost-mode --no-notify --browser 'firefox' --proxy 'localhost:5174' --files 'src/public/**/*.*'\"",
         "build": "./npm_scripts/build",
         "start": "node dist/index.js"
     },

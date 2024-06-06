@@ -1,21 +1,29 @@
 import config from './config.js';
-const socket = new WebSocket(config.ws_main_addr);
+let socket = new WebSocket(config.ws_main_addr);
 const form = document.getElementById('msgForm');
-socket.addEventListener('open', event => {
+const chat = document.getElementById('chat');
+const message = document.getElementById('inputBox');
+const inputBox = document.getElementById('inputBox');
+let clientId = '';
+socket.addEventListener('open', () => {
     console.log('Websocket connection opened');
 });
 socket.onmessage = message => {
-    console.log('Message from server :=>', message.data);
+    const data = JSON.parse(message.data);
+    if (data.type === 'id' && !clientId.length) {
+        clientId = data.id;
+    }
+    else {
+        const message = document.createElement('p');
+        message.textContent = `${data.id}: ${data.message}`;
+        chat.appendChild(message);
+    }
 };
 socket.addEventListener('close', () => {
     console.log('Websocket connection closed');
 });
 form.addEventListener('submit', event => {
     event.preventDefault();
-    const message = document.getElementById('inputBox');
     socket.send(message.value);
-    const newMsg = document.getElementById('newMsg');
-    newMsg.textContent = message.value;
-    const inputBox = document.getElementById('inputBox');
     inputBox.textContent = '';
 });

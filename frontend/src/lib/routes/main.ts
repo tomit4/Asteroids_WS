@@ -9,13 +9,13 @@ import type {
 
 export default (
     fastify: FastifyInstance,
-    options: FastifyPluginOptions,
+    _: FastifyPluginOptions,
     done: HookHandlerDoneFunction,
 ) => {
     fastify.route({
         method: 'GET',
         url: '/',
-        handler: async (request: FastifyRequest, reply: FastifyReply) => {
+        handler: async (_: FastifyRequest, reply: FastifyReply) => {
             try {
                 reply
                     .code(200)
