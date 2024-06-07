@@ -10,6 +10,7 @@ import { nanoid } from 'nanoid'
 
 type Client = {
     id: string
+    color: string
     socket: WebSocket
 }
 
@@ -38,15 +39,50 @@ export default (
                 return reply
             }
         },
-        // TODO: Now create rooms where only two chatters are allowed
+        // TODO: Now create rooms where only two players are allowed
         wsHandler: (socket: WebSocket, _: FastifyRequest) => {
             const clientId = nanoid()
+            // TODO: when assigning player colors,
+            // don't assign random, just choose two as this each room will only be two players...
+            const genRandomColor = (): string => {
+                return (
+                    '#' +
+                    (((1 << 24) * Math.random()) | 0)
+                        .toString(16)
+                        .padStart(6, '0')
+                )
+            }
+
             const client: Client = {
                 id: clientId,
+                color: genRandomColor(),
                 socket,
             }
             clients.set(clientId, client)
-            socket.send(JSON.stringify({ type: 'id', id: clientId }))
+
+            const broadcastClientList = () => {
+                const clientList = Array.from(clients.values()).map(client => ({
+                    id: client.id,
+                    color: client.color,
+                }))
+                clients.forEach(client => {
+                    client.socket.send(
+                        JSON.stringify({
+                            type: 'clients',
+                            clients: clientList,
+                        }),
+                    )
+                })
+            }
+
+            socket.send(
+                JSON.stringify({
+                    type: 'id',
+                    id: clientId,
+                    color: client.color,
+                }),
+            )
+            broadcastClientList()
 
             socket.on('message', chunk => {
                 clients.forEach(client => {
@@ -55,6 +91,7 @@ export default (
                     client.socket.send(
                         JSON.stringify({
                             id: clientId,
+                            color: client.color,
                             type: 'message',
                             message: chunk.toString(),
                         }),
@@ -63,6 +100,7 @@ export default (
             })
             socket.on('close', () => {
                 clients.delete(clientId)
+                broadcastClientList()
                 if (clients.size === 0) socket.close()
             })
         },
