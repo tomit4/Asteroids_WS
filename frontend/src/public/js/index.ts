@@ -5,7 +5,6 @@ const form: HTMLFormElement = document.getElementById(
 ) as HTMLFormElement
 const chat = document.getElementById('chat') as HTMLDivElement
 const message = document.getElementById('inputBox') as HTMLInputElement
-const inputBox = document.getElementById('inputBox') as HTMLElement
 
 let clientId: string = ''
 
@@ -13,14 +12,25 @@ socket.addEventListener('open', () => {
     console.log('Websocket connection opened')
 })
 
+// NOTE: Technically this only really works with two clients currently
 socket.onmessage = message => {
     const data = JSON.parse(message.data)
     if (data.type === 'id' && !clientId.length) {
         clientId = data.id
-    } else {
+    } else if (data.type === 'message') {
         const message = document.createElement('p')
         message.textContent = `${data.id}: ${data.message}`
-        chat.appendChild(message)
+        if (data.id === clientId) {
+            const yourMsg = document.createElement('div')
+            yourMsg.classList.add('yourMsg')
+            yourMsg.appendChild(message)
+            chat.appendChild(yourMsg)
+        } else {
+            const theirMsg = document.createElement('div')
+            theirMsg.classList.add('theirMsg')
+            theirMsg.appendChild(message)
+            chat.appendChild(theirMsg)
+        }
     }
 }
 
@@ -31,5 +41,5 @@ socket.addEventListener('close', () => {
 form.addEventListener('submit', event => {
     event.preventDefault()
     socket.send(message.value)
-    inputBox.textContent = ''
+    form.reset()
 })

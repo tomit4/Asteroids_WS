@@ -41,3 +41,12 @@ body {
   background-size: cover;
 }
 */
+
+.yourMsg {
+    color: blue;
+}
+
+.theirMsg {
+    text-align: right;
+    color: green;
+}

@@ -50,15 +50,15 @@ export default (
 
             socket.on('message', chunk => {
                 clients.forEach(client => {
-                    if (client.socket !== socket) {
-                        client.socket.send(
-                            JSON.stringify({
-                                id: client.id,
-                                type: 'message',
-                                message: chunk.toString(),
-                            }),
-                        )
-                    }
+                    // NOTE: Use if only want to see messages from other client
+                    // if (client.socket !== socket) {}
+                    client.socket.send(
+                        JSON.stringify({
+                            id: clientId,
+                            type: 'message',
+                            message: chunk.toString(),
+                        }),
+                    )
                 })
             })
             socket.on('close', () => {
