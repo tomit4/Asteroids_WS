@@ -77,3 +77,16 @@ textarea {
 #clientList > li > * {
     margin-right: 5em;
 }
+
+#errorMessages {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid red;
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.errorMsg {
+    margin: 0;
+    padding: 0;
+}

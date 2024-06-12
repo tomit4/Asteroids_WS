@@ -61,6 +61,18 @@ export default (
             clients.set(clientId, client)
 
             const broadcastClientList = () => {
+                if (clients.size > 2) {
+                    console.log('CLIENTS SIZE EXCEEDED TWO', clients.size)
+                    socket.send(
+                        JSON.stringify({
+                            type: 'error',
+                            message:
+                                'Sorry, but no more than two players at a time. Please wait until someone else logs out.',
+                        }),
+                    )
+                    socket.close()
+                    return
+                }
                 const clientList = Array.from(clients.values()).map(client => ({
                     id: client.id,
                     color: client.color,
@@ -82,6 +94,7 @@ export default (
                     color: client.color,
                 }),
             )
+
             broadcastClientList()
 
             socket.on('message', chunk => {

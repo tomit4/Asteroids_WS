@@ -5,6 +5,7 @@ const chat = document.getElementById('chat');
 const yourId = document.getElementById('yourId');
 const message = document.getElementById('inputBox');
 const clientListElement = document.getElementById('clientList');
+const errMessages = document.getElementById('errMessages');
 let clientId = '';
 let localClientList = [];
 const updateClientList = (clients) => {
@@ -55,6 +56,13 @@ socket.onmessage = message => {
     }
     else if (data.type === 'clients') {
         updateClientList(data.clients);
+    }
+    else if (data.type === 'error') {
+        const errMsg = document.createElement('p');
+        errMsg.textContent = data.message;
+        errMsg.classList.add('errMsg');
+        errMessages.appendChild(errMsg);
+        socket.close();
     }
 };
 socket.addEventListener('close', () => {

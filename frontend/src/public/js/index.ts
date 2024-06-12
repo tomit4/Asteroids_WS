@@ -9,6 +9,7 @@ const message = document.getElementById('inputBox') as HTMLInputElement
 const clientListElement = document.getElementById(
     'clientList',
 ) as HTMLUListElement
+const errMessages = document.getElementById('errMessages') as HTMLDivElement
 
 let clientId: string = ''
 
@@ -66,6 +67,12 @@ socket.onmessage = message => {
         }
     } else if (data.type === 'clients') {
         updateClientList(data.clients)
+    } else if (data.type === 'error') {
+        const errMsg = document.createElement('p')
+        errMsg.textContent = data.message
+        errMsg.classList.add('errMsg')
+        errMessages.appendChild(errMsg)
+        socket.close()
     }
 }
 
