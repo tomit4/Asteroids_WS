@@ -61,6 +61,8 @@ export default (
             clients.set(clientId, client)
 
             const broadcastClientList = () => {
+                // TODO: Handle this differently later on,
+                // have even number clients "pair off" into "rooms"
                 if (clients.size > 2) {
                     console.log('CLIENTS SIZE EXCEEDED TWO', clients.size)
                     socket.send(
