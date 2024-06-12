@@ -9,9 +9,7 @@
 }
 
 body {
-    font-family: system-ui;
-    font-size: 1.125rem;
-    line-height: 1.5;
+    text-align: center;
 }
 
 main {
@@ -89,4 +87,11 @@ textarea {
 .errorMsg {
     margin: 0;
     padding: 0;
+}
+
+/* CANVAS */
+#board {
+    background-color: black;
+    border-top: 5px solid skyblue;
+    border-bottom: 5px solid skyblue;
 }
