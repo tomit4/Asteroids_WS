@@ -94,4 +94,14 @@ textarea {
     background-color: black;
     border-top: 5px solid skyblue;
     border-bottom: 5px solid skyblue;
+    width: 500px;
+    height: 500px;
+}
+.container {
+    display: flex;
+}
+
+#opponentId {
+    color: white;
+    font-weight: 900;
 }
