@@ -14,12 +14,12 @@ type ClientProfile = {
 let localClientList: ClientProfile[] = []
 let clientId: string = ''
 
-const updateClientList = (clients: ClientProfile[]) => {
+const updateClientList = (clients: ClientProfile[]): void => {
     localClientList = clients
     console.log('localClientList :=>', localClientList)
     clients.forEach(client => {
         if (client.id !== clientId) {
-            player2.id = Number(client.id)
+            player2.id = client.id
             opponentId.innerHTML = ''
             const pTag = document.createElement('p') as HTMLParagraphElement
             pTag.textContent = `Your Opponent is: ${client.id}`
@@ -29,11 +29,11 @@ const updateClientList = (clients: ClientProfile[]) => {
     })
 }
 
-socket.addEventListener('open', () => {
+socket.addEventListener('open', (): void => {
     console.log('Websocket connection opened')
 })
 
-socket.addEventListener('close', () => {
+socket.addEventListener('close', (): void => {
     console.log('Websocket connection closed')
 })
 
@@ -49,12 +49,13 @@ const playerHeight = 50
 const playerVelocityY = 0
 
 type PlayerType = {
-    id: number | null
+    id: string | null
     x: number
     y: number
     width: number
     height: number
     velocityY: number
+    direction: string | undefined
 }
 
 const player1: PlayerType = {
@@ -64,6 +65,7 @@ const player1: PlayerType = {
     width: playerWidth,
     height: playerHeight,
     velocityY: playerVelocityY,
+    direction: undefined,
 }
 
 const player2: PlayerType = {
@@ -73,6 +75,7 @@ const player2: PlayerType = {
     width: playerWidth,
     height: playerHeight,
     velocityY: playerVelocityY,
+    direction: undefined,
 }
 
 // ball
@@ -93,14 +96,14 @@ let player1Score = 0
 let player2Score = 0
 */
 
-window.onload = () => {
+window.onload = (): void => {
     board.height = boardHeight
     board.width = boardWidth
     requestAnimationFrame(update)
     document.addEventListener('keyup', emitMoveEvent)
 }
 
-const update = () => {
+const update = (): void => {
     requestAnimationFrame(update)
     context.clearRect(0, 0, board.width, board.height)
 
@@ -167,11 +170,11 @@ const update = () => {
     }
 }
 
-const outOfBounds = (yPosition: number) => {
+const outOfBounds = (yPosition: number): boolean => {
     return yPosition < 0 || yPosition + playerHeight > boardHeight
 }
 
-socket.onmessage = message => {
+socket.onmessage = (message): void => {
     const data = JSON.parse(message.data)
     if (data.type === 'id' && !clientId.length) {
         clientId = data.id
@@ -185,7 +188,6 @@ socket.onmessage = message => {
     } else if (data.type === 'message') {
         const playerData = JSON.parse(data.message)
         movePlayer(playerData)
-        console.log('playerData :=>', playerData)
     }
     if (data.type === 'error') {
         const errMsg = document.createElement('p')
@@ -197,20 +199,18 @@ socket.onmessage = message => {
 }
 
 // TODO: Consider sending more info about player to backend
-const emitMoveEvent = (e: KeyboardEvent) => {
+const emitMoveEvent = (e: KeyboardEvent): void => {
     if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
-        socket.send(
-            JSON.stringify({
-                id: clientId,
-                direction: e.code,
-            }),
-        )
+        const playerData: PlayerType =
+            player1.id === clientId ? player1 : player2
+        playerData.direction = e.code
+        socket.send(JSON.stringify(playerData))
     }
 }
 
 // TODO: Refactor logic, think on this, there's a lot repeated here,
 // and doing ANOTHER helper function feels like a code smell...
-const movePlayer = (playerData: { id: string; direction: string }) => {
+const movePlayer = (playerData: PlayerType): void => {
     if (playerData.direction === 'ArrowUp') {
         if (localClientList[0].id === playerData.id) {
             player1.velocityY = -3

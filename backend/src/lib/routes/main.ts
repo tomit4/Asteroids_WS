@@ -104,8 +104,6 @@ export default (
                     // if (client.socket !== socket) {}
                     client.socket.send(
                         JSON.stringify({
-                            id: clientId,
-                            color: client.color,
                             type: 'message',
                             message: chunk.toString(),
                         }),

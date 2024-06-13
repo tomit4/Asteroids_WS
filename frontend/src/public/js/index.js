@@ -10,7 +10,7 @@ const updateClientList = (clients) => {
     console.log('localClientList :=>', localClientList);
     clients.forEach(client => {
         if (client.id !== clientId) {
-            player2.id = Number(client.id);
+            player2.id = client.id;
             opponentId.innerHTML = '';
             const pTag = document.createElement('p');
             pTag.textContent = `Your Opponent is: ${client.id}`;
@@ -39,6 +39,7 @@ const player1 = {
     width: playerWidth,
     height: playerHeight,
     velocityY: playerVelocityY,
+    direction: undefined,
 };
 const player2 = {
     id: null,
@@ -47,6 +48,7 @@ const player2 = {
     width: playerWidth,
     height: playerHeight,
     velocityY: playerVelocityY,
+    direction: undefined,
 };
 window.onload = () => {
     board.height = boardHeight;
@@ -74,7 +76,7 @@ const update = () => {
 const outOfBounds = (yPosition) => {
     return yPosition < 0 || yPosition + playerHeight > boardHeight;
 };
-socket.onmessage = message => {
+socket.onmessage = (message) => {
     const data = JSON.parse(message.data);
     if (data.type === 'id' && !clientId.length) {
         clientId = data.id;
@@ -90,7 +92,6 @@ socket.onmessage = message => {
     else if (data.type === 'message') {
         const playerData = JSON.parse(data.message);
         movePlayer(playerData);
-        console.log('playerData :=>', playerData);
     }
     if (data.type === 'error') {
         const errMsg = document.createElement('p');
@@ -102,10 +103,9 @@ socket.onmessage = message => {
 };
 const emitMoveEvent = (e) => {
     if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
-        socket.send(JSON.stringify({
-            id: clientId,
-            direction: e.code,
-        }));
+        const playerData = player1.id === clientId ? player1 : player2;
+        playerData.direction = e.code;
+        socket.send(JSON.stringify(playerData));
     }
 };
 const movePlayer = (playerData) => {
