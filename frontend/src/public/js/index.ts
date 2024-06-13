@@ -96,11 +96,6 @@ let player2Score = 0
 window.onload = () => {
     board.height = boardHeight
     board.width = boardWidth
-
-    // draw initial player1
-    context.fillStyle = 'skyblue'
-    context.fillRect(player1.x, player1.y, player1.width, player1.height)
-
     requestAnimationFrame(update)
     document.addEventListener('keyup', emitMoveEvent)
 }
@@ -216,33 +211,17 @@ const emitMoveEvent = (e: KeyboardEvent) => {
 // TODO: Refactor logic, think on this, there's a lot repeated here,
 // and doing ANOTHER helper function feels like a code smell...
 const movePlayer = (playerData: { id: string; direction: string }) => {
-    if (playerData.id === clientId) {
-        if (playerData.direction === 'ArrowUp') {
-            if (localClientList[0].id === playerData.id) {
-                player1.velocityY = -3
-            } else if (localClientList[1].id === playerData.id) {
-                player2.velocityY = -3
-            }
-        } else if (playerData.direction === 'ArrowDown') {
-            if (localClientList[0].id === playerData.id) {
-                player1.velocityY = 3
-            } else if (localClientList[1].id === playerData.id) {
-                player2.velocityY = 3
-            }
+    if (playerData.direction === 'ArrowUp') {
+        if (localClientList[0].id === playerData.id) {
+            player1.velocityY = -3
+        } else if (localClientList[1].id === playerData.id) {
+            player2.velocityY = -3
         }
-    } else {
-        if (playerData.direction === 'ArrowUp') {
-            if (localClientList[0].id === playerData.id) {
-                player1.velocityY = -3
-            } else if (localClientList[1].id === playerData.id) {
-                player2.velocityY = -3
-            }
-        } else if (playerData.direction === 'ArrowDown') {
-            if (localClientList[0].id === playerData.id) {
-                player1.velocityY = 3
-            } else if (localClientList[1].id === playerData.id) {
-                player2.velocityY = 3
-            }
+    } else if (playerData.direction === 'ArrowDown') {
+        if (localClientList[0].id === playerData.id) {
+            player1.velocityY = 3
+        } else if (localClientList[1].id === playerData.id) {
+            player2.velocityY = 3
         }
     }
 }

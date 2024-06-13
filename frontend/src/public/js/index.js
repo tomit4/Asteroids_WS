@@ -51,8 +51,6 @@ const player2 = {
 window.onload = () => {
     board.height = boardHeight;
     board.width = boardWidth;
-    context.fillStyle = 'skyblue';
-    context.fillRect(player1.x, player1.y, player1.width, player1.height);
     requestAnimationFrame(update);
     document.addEventListener('keyup', emitMoveEvent);
 };
@@ -111,40 +109,20 @@ const emitMoveEvent = (e) => {
     }
 };
 const movePlayer = (playerData) => {
-    if (playerData.id === clientId) {
-        if (playerData.direction === 'ArrowUp') {
-            if (localClientList[0].id === playerData.id) {
-                player1.velocityY = -3;
-            }
-            else if (localClientList[1].id === playerData.id) {
-                player2.velocityY = -3;
-            }
+    if (playerData.direction === 'ArrowUp') {
+        if (localClientList[0].id === playerData.id) {
+            player1.velocityY = -3;
         }
-        else if (playerData.direction === 'ArrowDown') {
-            if (localClientList[0].id === playerData.id) {
-                player1.velocityY = 3;
-            }
-            else if (localClientList[1].id === playerData.id) {
-                player2.velocityY = 3;
-            }
+        else if (localClientList[1].id === playerData.id) {
+            player2.velocityY = -3;
         }
     }
-    else {
-        if (playerData.direction === 'ArrowUp') {
-            if (localClientList[0].id === playerData.id) {
-                player1.velocityY = -3;
-            }
-            else if (localClientList[1].id === playerData.id) {
-                player2.velocityY = -3;
-            }
+    else if (playerData.direction === 'ArrowDown') {
+        if (localClientList[0].id === playerData.id) {
+            player1.velocityY = 3;
         }
-        else if (playerData.direction === 'ArrowDown') {
-            if (localClientList[0].id === playerData.id) {
-                player1.velocityY = 3;
-            }
-            else if (localClientList[1].id === playerData.id) {
-                player2.velocityY = 3;
-            }
+        else if (localClientList[1].id === playerData.id) {
+            player2.velocityY = 3;
         }
     }
 };
