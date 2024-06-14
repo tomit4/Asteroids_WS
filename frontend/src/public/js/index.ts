@@ -1,33 +1,18 @@
 // TODO: Heavy Refactor lengthy functions
 // and separate out canvas/clientlist/message functionality
 import config from './config.js'
-let socket = new WebSocket(config.ws_main_addr as string)
+const socket = new WebSocket(config.ws_main_addr as string)
 const yourId = document.getElementById('yourId') as HTMLSpanElement
 const opponentId = document.getElementById('opponentId') as HTMLSpanElement
 const errMessages = document.getElementById('errMessages') as HTMLDivElement
 
 type ClientProfile = {
-    id: string
-    color: string
+    id: string | null
+    player: PlayerType
 }
 
 let localClientList: ClientProfile[] = []
-let clientId: string = ''
-
-const updateClientList = (clients: ClientProfile[]): void => {
-    localClientList = clients
-    console.log('localClientList :=>', localClientList)
-    clients.forEach(client => {
-        if (client.id !== clientId) {
-            player2.id = client.id
-            opponentId.innerHTML = ''
-            const pTag = document.createElement('p') as HTMLParagraphElement
-            pTag.textContent = `Your Opponent is: ${client.id}`
-            pTag.style.backgroundColor = client.color
-            opponentId.appendChild(pTag)
-        }
-    })
-}
+let clientId: string | null = null
 
 socket.addEventListener('open', (): void => {
     console.log('Websocket connection opened')
@@ -38,45 +23,50 @@ socket.addEventListener('close', (): void => {
 })
 
 // CANVAS
-let board = document.getElementById('board') as HTMLCanvasElement
+const board = document.getElementById('board') as HTMLCanvasElement
+const context = board.getContext('2d') as CanvasRenderingContext2D
 const boardWidth: number = 500
 const boardHeight: number = 500
-let context = board.getContext('2d') as CanvasRenderingContext2D
 
 // players
-const playerWidth = 10
-const playerHeight = 50
-const playerVelocityY = 0
+const playerWidth: number = 10
+const playerHeight: number = 50
+const playerVelocityY: number = 0
 
-type PlayerType = {
+type PlayerDefaultType = {
     id: string | null
-    x: number
-    y: number
     width: number
     height: number
     velocityY: number
-    direction: string | undefined
+    color: string | undefined
+    direction: string | null
 }
 
-const player1: PlayerType = {
+interface PlayerType extends PlayerDefaultType {
+    x: number | undefined
+    y: number | undefined
+}
+
+const playerDefaults: PlayerDefaultType = {
     id: null,
-    x: 10,
-    y: boardHeight / 2,
     width: playerWidth,
     height: playerHeight,
     velocityY: playerVelocityY,
-    direction: undefined,
+    color: undefined,
+    direction: null,
 }
 
-const player2: PlayerType = {
-    id: null,
+let player1: PlayerType = { ...playerDefaults, x: 10, y: boardHeight / 2 }
+
+let player2: PlayerType = {
+    ...playerDefaults,
     x: boardWidth - playerWidth - 10,
     y: boardHeight / 2,
-    width: playerWidth,
-    height: playerHeight,
-    velocityY: playerVelocityY,
-    direction: undefined,
 }
+localClientList.push(
+    { id: player1.id, player: player1 },
+    { id: player2.id, player: player2 },
+)
 
 // ball
 /*
@@ -100,24 +90,33 @@ window.onload = (): void => {
     board.height = boardHeight
     board.width = boardWidth
     requestAnimationFrame(update)
-    document.addEventListener('keyup', emitMoveEvent)
+    document.addEventListener('keydown', emitMoveEvent, false)
 }
 
 const update = (): void => {
     requestAnimationFrame(update)
     context.clearRect(0, 0, board.width, board.height)
+    context.fillStyle = 'skyblue'
 
     // player1
-    context.fillStyle = 'skyblue'
-    let nextPlayer1Y = player1.y + player1.velocityY
-    if (!outOfBounds(nextPlayer1Y)) player1.y = nextPlayer1Y
-    context.fillRect(player1.x, player1.y, player1.width, player1.height)
+    let nextPlayer1Y = player1.y ? player1.y + player1.velocityY : player1.y
+    if (!outOfBounds(nextPlayer1Y as number)) player1.y = nextPlayer1Y
+    context.fillRect(
+        player1.x as number,
+        player1.y as number,
+        player1.width,
+        player1.height,
+    )
 
     // player2
-    context.fillStyle = 'skyblue'
-    let nextPlayer2Y = player2.y + player2.velocityY
-    if (!outOfBounds(nextPlayer2Y)) player2.y = nextPlayer2Y
-    context.fillRect(player2.x, player2.y, player2.width, player2.height)
+    let nextPlayer2Y = player2.y ? player2.y + player2.velocityY : player2.y
+    if (!outOfBounds(nextPlayer2Y as number)) player2.y = nextPlayer2Y
+    context.fillRect(
+        player2.x as number,
+        player2.y as number,
+        player2.width,
+        player2.height,
+    )
 
     // ball
     /*
@@ -174,23 +173,46 @@ const outOfBounds = (yPosition: number): boolean => {
     return yPosition < 0 || yPosition + playerHeight > boardHeight
 }
 
+const updateClientList = (clients: ClientProfile[]): void => {
+    // TODO: Remove localClientLIst when you refactor movePlayer
+    localClientList = clients
+    player1 = {
+        ...player1,
+        id: clients[0]?.player.id,
+        color: clients[0]?.player.color,
+    }
+    player2 = {
+        ...player2,
+        id: clients[1]?.player.id,
+        color: clients[1]?.player.color,
+    }
+
+    clients.forEach(client => {
+        const pTag = document.createElement('p') as HTMLParagraphElement
+        pTag.style.backgroundColor = client.player.color as string
+        if (client.id !== clientId) {
+            opponentId.innerText = ''
+            pTag.textContent = `Your Opponent is: ${client.id}`
+            opponentId.appendChild(pTag)
+        } else {
+            if (clients.length !== 2) opponentId.innerText = ''
+            yourId.innerText = ''
+            pTag.textContent = `Your ID is: ${clientId}`
+            yourId.appendChild(pTag)
+        }
+    })
+}
+
 socket.onmessage = (message): void => {
     const data = JSON.parse(message.data)
-    if (data.type === 'id' && !clientId.length) {
-        clientId = data.id
-        player1.id = data.id
-        const pTag = document.createElement('p') as HTMLParagraphElement
-        pTag.textContent = `Your ID is: ${clientId}`
-        pTag.style.backgroundColor = data.color
-        yourId.appendChild(pTag)
-    } else if (data.type === 'clients') {
-        updateClientList(data.clients)
-    } else if (data.type === 'message') {
+    if (data.type === 'id') clientId = data.id
+    if (data.type === 'clients') updateClientList(data.clients)
+    if (data.type === 'message') {
         const playerData = JSON.parse(data.message)
         movePlayer(playerData)
     }
     if (data.type === 'error') {
-        const errMsg = document.createElement('p')
+        const errMsg = document.createElement('p') as HTMLParagraphElement
         errMsg.textContent = data.message
         errMsg.classList.add('errMsg')
         errMessages.appendChild(errMsg)
@@ -198,9 +220,9 @@ socket.onmessage = (message): void => {
     }
 }
 
-// TODO: Consider sending more info about player to backend
 const emitMoveEvent = (e: KeyboardEvent): void => {
     if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+        e.preventDefault()
         const playerData: PlayerType =
             player1.id === clientId ? player1 : player2
         playerData.direction = e.code
@@ -208,8 +230,7 @@ const emitMoveEvent = (e: KeyboardEvent): void => {
     }
 }
 
-// TODO: Refactor logic, think on this, there's a lot repeated here,
-// and doing ANOTHER helper function feels like a code smell...
+// TODO: Refactor to not need localClientList
 const movePlayer = (playerData: PlayerType): void => {
     if (playerData.direction === 'ArrowUp') {
         if (localClientList[0].id === playerData.id) {
