@@ -5,7 +5,7 @@ import type {
     FastifyRequest,
     HookHandlerDoneFunction,
 } from 'fastify'
-import type { WebSocket } from '@fastify/websocket'
+import type { WebSocket, WebsocketHandler } from '@fastify/websocket'
 import { nanoid } from 'nanoid'
 
 type Client = {
@@ -27,6 +27,12 @@ type PlayerType = {
 
 const clients: Map<string, Client> = new Map()
 
+// TODO: when assigning player colors,
+// don't assign random, just choose two as this each room will only be two players...
+const genRandomColor = (): string => {
+    return '#' + (((1 << 24) * Math.random()) | 0).toString(16).padStart(6, '0')
+}
+
 export default (
     fastify: FastifyInstance,
     _: FastifyPluginOptions,
@@ -35,7 +41,10 @@ export default (
     fastify.route({
         method: 'GET',
         url: '/',
-        handler: async (_: FastifyRequest, reply: FastifyReply) => {
+        handler: async (
+            _: FastifyRequest,
+            reply: FastifyReply,
+        ): Promise<FastifyReply> => {
             try {
                 reply
                     .code(404)
@@ -51,18 +60,7 @@ export default (
             }
         },
         // TODO: Now create rooms where only two players are allowed
-        wsHandler: (socket: WebSocket, _: FastifyRequest) => {
-            // TODO: when assigning player colors,
-            // don't assign random, just choose two as this each room will only be two players...
-            const genRandomColor = (): string => {
-                return (
-                    '#' +
-                    (((1 << 24) * Math.random()) | 0)
-                        .toString(16)
-                        .padStart(6, '0')
-                )
-            }
-
+        wsHandler: (socket: WebSocket, _: FastifyRequest): void => {
             const player: PlayerType = {
                 id: null,
                 x: null,
@@ -83,7 +81,7 @@ export default (
             }
             clients.set(clientId, client)
 
-            const broadcastClientList = () => {
+            const broadcastClientList = (): void => {
                 // TODO: Handle this differently later on,
                 // have even number clients "pair off" into "rooms"
                 if (clients.size > 2) {
@@ -98,11 +96,13 @@ export default (
                     socket.close()
                     return
                 }
-                const clientList = Array.from(clients.values()).map(client => ({
-                    id: client.id,
-                    player: client.player,
-                }))
-                clients.forEach(client => {
+                const clientList = Array.from(clients.values()).map(
+                    (client: Client) => ({
+                        id: client.id,
+                        player: client.player,
+                    }),
+                )
+                clients.forEach((client: Client) => {
                     client.socket.send(
                         JSON.stringify({
                             type: 'clients',
@@ -122,8 +122,8 @@ export default (
 
             broadcastClientList()
 
-            socket.on('message', chunk => {
-                clients.forEach(client => {
+            socket.on('message', (chunk: WebsocketHandler): void => {
+                clients.forEach((client: Client) => {
                     // NOTE: Use if only want to see messages from other client
                     // if (client.socket !== socket) {}
                     client.socket.send(
@@ -134,7 +134,7 @@ export default (
                     )
                 })
             })
-            socket.on('close', () => {
+            socket.on('close', (): void => {
                 clients.delete(clientId)
                 broadcastClientList()
                 if (clients.size === 0) socket.close()

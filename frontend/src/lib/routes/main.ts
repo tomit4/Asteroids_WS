@@ -15,7 +15,10 @@ export default (
     fastify.route({
         method: 'GET',
         url: '/',
-        handler: async (_: FastifyRequest, reply: FastifyReply) => {
+        handler: async (
+            _: FastifyRequest,
+            reply: FastifyReply,
+        ): Promise<FastifyReply> => {
             try {
                 reply
                     .code(200)

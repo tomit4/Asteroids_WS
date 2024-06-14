@@ -43,8 +43,8 @@ type PlayerDefaultType = {
 }
 
 interface PlayerType extends PlayerDefaultType {
-    x: number | undefined
-    y: number | undefined
+    x: number | null
+    y: number | null
 }
 
 const playerDefaults: PlayerDefaultType = {
@@ -56,13 +56,18 @@ const playerDefaults: PlayerDefaultType = {
     direction: null,
 }
 
-let player1: PlayerType = { ...playerDefaults, x: 10, y: boardHeight / 2 }
+let player1: PlayerType = {
+    ...playerDefaults,
+    x: 10,
+    y: boardHeight / 2,
+}
 
 let player2: PlayerType = {
     ...playerDefaults,
     x: boardWidth - playerWidth - 10,
     y: boardHeight / 2,
 }
+
 localClientList.push(
     { id: player1.id, player: player1 },
     { id: player2.id, player: player2 },
@@ -187,7 +192,7 @@ const updateClientList = (clients: ClientProfile[]): void => {
         color: clients[1]?.player.color,
     }
 
-    clients.forEach(client => {
+    clients.forEach((client: ClientProfile) => {
         const pTag = document.createElement('p') as HTMLParagraphElement
         pTag.style.backgroundColor = client.player.color as string
         if (client.id !== clientId) {
