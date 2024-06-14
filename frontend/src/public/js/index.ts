@@ -1,5 +1,6 @@
 // TODO: Heavy Refactor lengthy functions
 // and separate out canvas/clientlist/message functionality
+// TODO: Figure out how to reset game board if one player loses connection
 import config from './config.js'
 const socket = new WebSocket(config.ws_main_addr as string)
 const yourId = document.getElementById('yourId') as HTMLSpanElement
@@ -38,7 +39,7 @@ type PlayerDefaultType = {
     width: number
     height: number
     velocityY: number
-    color: string | undefined
+    color: string | null
     direction: string | null
 }
 
@@ -52,7 +53,7 @@ const playerDefaults: PlayerDefaultType = {
     width: playerWidth,
     height: playerHeight,
     velocityY: playerVelocityY,
-    color: undefined,
+    color: null,
     direction: null,
 }
 
@@ -192,6 +193,7 @@ const updateClientList = (clients: ClientProfile[]): void => {
         color: clients[1]?.player.color,
     }
 
+    if (clients.length !== 2) opponentId.innerText = ''
     clients.forEach((client: ClientProfile) => {
         const pTag = document.createElement('p') as HTMLParagraphElement
         pTag.style.backgroundColor = client.player.color as string
@@ -200,7 +202,6 @@ const updateClientList = (clients: ClientProfile[]): void => {
             pTag.textContent = `Your Opponent is: ${client.id}`
             opponentId.appendChild(pTag)
         } else {
-            if (clients.length !== 2) opponentId.innerText = ''
             yourId.innerText = ''
             pTag.textContent = `Your ID is: ${clientId}`
             yourId.appendChild(pTag)
@@ -228,6 +229,8 @@ socket.onmessage = (message): void => {
 const emitMoveEvent = (e: KeyboardEvent): void => {
     if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
         e.preventDefault()
+        // TODO: Refactor to not need localClientList
+        if (localClientList.length !== 2) return
         const playerData: PlayerType =
             player1.id === clientId ? player1 : player2
         playerData.direction = e.code

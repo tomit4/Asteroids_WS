@@ -21,7 +21,7 @@ type PlayerType = {
     width: number
     height: number
     velocityY: number
-    color: string | undefined
+    color: string | null
     direction: string | null
 }
 
@@ -71,8 +71,8 @@ export default (
                 color: genRandomColor(),
                 direction: null,
             }
-            player.id = nanoid()
-            const clientId = player.id
+            player.id = null ?? nanoid()
+            const clientId: string | null = player.id
 
             const client: Client = {
                 id: clientId,
