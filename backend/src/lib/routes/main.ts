@@ -60,6 +60,7 @@ export default (
             }
         },
         // TODO: Now create rooms where only two players are allowed
+        // TODO: Wrap entire handler block in try/catch/finally witht throws
         wsHandler: (socket: WebSocket, _: FastifyRequest): void => {
             const player: PlayerType = {
                 id: null,
@@ -122,6 +123,7 @@ export default (
 
             broadcastClientList()
 
+            // TODO: send ball data here
             socket.on('message', (chunk: WebsocketHandler): void => {
                 clients.forEach((client: Client) => {
                     // NOTE: Use if only want to see messages from other client
