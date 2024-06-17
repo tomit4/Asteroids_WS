@@ -26,9 +26,10 @@ const playerDefaults = {
     color: null,
     direction: null,
 };
-let player1 = Object.assign(Object.assign({}, playerDefaults), { x: 10, y: boardHeight / 2 });
-let player2 = Object.assign(Object.assign({}, playerDefaults), { x: boardWidth - playerWidth - 10, y: boardHeight / 2 });
-localClientList.push({ id: player1.id, player: player1 }, { id: player2.id, player: player2 });
+const player1Default = Object.assign(Object.assign({}, playerDefaults), { x: 10, y: boardHeight / 2 });
+const player2Default = Object.assign(Object.assign({}, playerDefaults), { x: boardWidth - playerWidth - 10, y: boardHeight / 2 });
+let player1 = player1Default;
+let player2 = player2Default;
 window.onload = () => {
     board.height = boardHeight;
     board.width = boardWidth;
@@ -80,8 +81,13 @@ socket.onmessage = (message) => {
     const data = JSON.parse(message.data);
     if (data.type === 'id')
         clientId = data.id;
-    if (data.type === 'clients')
+    if (data.type === 'clients') {
         updateClientList(data.clients);
+        if (localClientList.length !== 2) {
+            player1 = player1Default;
+            player2 = player2Default;
+        }
+    }
     if (data.type === 'message') {
         const playerData = JSON.parse(data.message);
         movePlayer(playerData);

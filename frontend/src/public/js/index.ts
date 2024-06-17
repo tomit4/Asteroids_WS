@@ -57,22 +57,20 @@ const playerDefaults: PlayerDefaultType = {
     direction: null,
 }
 
-let player1: PlayerType = {
+const player1Default: PlayerType = {
     ...playerDefaults,
     x: 10,
     y: boardHeight / 2,
 }
 
-let player2: PlayerType = {
+const player2Default: PlayerType = {
     ...playerDefaults,
     x: boardWidth - playerWidth - 10,
     y: boardHeight / 2,
 }
 
-localClientList.push(
-    { id: player1.id, player: player1 },
-    { id: player2.id, player: player2 },
-)
+let player1: PlayerType = player1Default
+let player2: PlayerType = player2Default
 
 // ball
 /*
@@ -180,7 +178,6 @@ const outOfBounds = (yPosition: number): boolean => {
 }
 
 const updateClientList = (clients: ClientProfile[]): void => {
-    // TODO: Remove localClientLIst when you refactor movePlayer
     localClientList = clients
     player1 = {
         ...player1,
@@ -212,7 +209,13 @@ const updateClientList = (clients: ClientProfile[]): void => {
 socket.onmessage = (message): void => {
     const data = JSON.parse(message.data)
     if (data.type === 'id') clientId = data.id
-    if (data.type === 'clients') updateClientList(data.clients)
+    if (data.type === 'clients') {
+        updateClientList(data.clients)
+        if (localClientList.length !== 2) {
+            player1 = player1Default
+            player2 = player2Default
+        }
+    }
     if (data.type === 'message') {
         const playerData = JSON.parse(data.message)
         movePlayer(playerData)
@@ -229,7 +232,6 @@ socket.onmessage = (message): void => {
 const emitMoveEvent = (e: KeyboardEvent): void => {
     if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
         e.preventDefault()
-        // TODO: Refactor to not need localClientList
         if (localClientList.length !== 2) return
         const playerData: PlayerType =
             player1.id === clientId ? player1 : player2
@@ -238,7 +240,6 @@ const emitMoveEvent = (e: KeyboardEvent): void => {
     }
 }
 
-// TODO: Refactor to not need localClientList
 const movePlayer = (playerData: PlayerType): void => {
     if (playerData.direction === 'ArrowUp') {
         if (localClientList[0].id === playerData.id) {
