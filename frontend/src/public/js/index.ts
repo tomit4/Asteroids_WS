@@ -1,6 +1,7 @@
 // TODO: Heavy Refactor lengthy functions
 // and separate out canvas/clientlist/message functionality
 // TODO: Figure out how to reset game board if one player loses connection
+// NOTE: Buggy mess for now, but kind of works...
 import config from './config.js'
 const socket = new WebSocket(config.ws_main_addr as string)
 const yourId = document.getElementById('yourId') as HTMLSpanElement
@@ -35,6 +36,7 @@ const playerHeight: number = 50
 const playerVelocityY: number = 0
 
 type PlayerDefaultType = {
+    type: string
     id: string | null
     width: number
     height: number
@@ -48,7 +50,18 @@ interface PlayerType extends PlayerDefaultType {
     y: number | null
 }
 
+type BallType = {
+    type: string
+    x: number
+    y: number
+    width: number
+    height: number
+    velocityX: number
+    velocityY: number
+}
+
 const playerDefaults: PlayerDefaultType = {
+    type: 'playerType',
     id: null,
     width: playerWidth,
     height: playerHeight,
@@ -73,10 +86,11 @@ let player1: PlayerType = player1Default
 let player2: PlayerType = player2Default
 
 // ball
-/*
 const ballWidth = 10
 const ballHeight = 10
-let ball = {
+
+const ballDefault: BallType = {
+    type: 'ballType',
     x: boardWidth / 2,
     y: boardHeight / 2,
     width: ballWidth,
@@ -84,7 +98,9 @@ let ball = {
     velocityX: 1,
     velocityY: 2,
 }
-*/
+
+let ball: BallType = ballDefault
+
 /*
 let player1Score = 0
 let player2Score = 0
@@ -123,46 +139,16 @@ const update = (): void => {
     )
 
     // ball
-    /*
-  context.fillStyle = 'white'
-  ball.x += ball.velocityX
-  ball.y += ball.velocityY
-  context.fillRect(ball.x, ball.y, ball.width, ball.height)
-
-  // if ball touches top or bottom of canvas
-  if (ball.y <= 0 || ball.y + ball.height >= boardHeight) {
-      ball.velocityY *= -1 // reverse direction
-  }
-
-  // bounce the ball back
-  if (detectCollision(ball, player1)) {
-      if (ball.x <= player1.x + player1.width) {
-          // left side of ball touches right side of player1
-          ball.velocityX *= -1 // flip x direction
-      }
-  } else if (detectCollision(ball, player2)) {
-      if (ball.x + ballWidth >= player2.x) {
-          // rigth side of ball touches left side of player2
-          ball.velocityX *= -1
-      }
-  }
-
-  // game over
-  if (ball.x < 0) {
-      player2Score++
-      resetGame(1)
-  } else if (ball.x + ballWidth > boardWidth) {
-      player1Score++
-      resetGame(-1)
-  }
-  */
+    context.fillStyle = 'white'
+    context.fillRect(ball.x, ball.y, ball.width, ball.height)
+    socket.send(JSON.stringify(ball))
 
     // score
     /*
-  context.font = '45px sans-serif'
-  context.fillText(String(player1Score), boardWidth / 5, 45)
-  context.fillText(String(player2Score), (boardWidth * 4) / 5 - 45, 45)
-  */
+    context.font = '45px sans-serif'
+    context.fillText(String(player1Score), boardWidth / 5, 45)
+    context.fillText(String(player2Score), (boardWidth * 4) / 5 - 45, 45)
+    */
 
     // draw dotted line down the middle
     for (let i = 10; i < board.height; i += 25) {
@@ -191,6 +177,7 @@ const updateClientList = (clients: ClientProfile[]): void => {
     }
 
     if (clients.length !== 2) opponentId.innerText = ''
+    else resetGame(1)
     clients.forEach((client: ClientProfile) => {
         const pTag = document.createElement('p') as HTMLParagraphElement
         pTag.style.backgroundColor = client.player.color as string
@@ -214,11 +201,16 @@ socket.onmessage = (message): void => {
         if (localClientList.length !== 2) {
             player1 = player1Default
             player2 = player2Default
+            resetGame(1)
         }
     }
     if (data.type === 'message') {
-        const playerData = JSON.parse(data.message)
-        movePlayer(playerData)
+        const messageData = JSON.parse(data.message)
+        if (messageData.type === 'playerType') {
+            movePlayer(messageData)
+        } else if (messageData.type === 'ballType') {
+            moveBall(messageData)
+        }
     }
     if (data.type === 'error') {
         const errMsg = document.createElement('p') as HTMLParagraphElement
@@ -256,28 +248,46 @@ const movePlayer = (playerData: PlayerType): void => {
     }
 }
 
-/*
-const detectCollision = (
-    a: { x: number; y: number; width: number; height: number },
-    b: { x: number; y: number; width: number; height: number },
-) => {
-    return (
-        a.x < b.x + b.width && // a's top left corner doesn't reach b's top right
-        // corner
-        a.x + a.width > b.x && // a's top right corner passes b's top left corner
-        a.y < b.y + b.height && // a's top left corner doesn't reach b's bottom
-        // left corner
-        a.y + a.height > b.y // a's bottom left corner passes b's top left corner
-    )
-}
-const resetGame = (direction: number) => {
-    ball = {
-        x: boardWidth / 2,
-        y: boardHeight / 2,
-        width: ballWidth,
-        height: ballHeight,
-        velocityX: direction,
-        velocityY: 2,
+const moveBall = (messageData: BallType) => {
+    ball.x += messageData.velocityX
+    ball.y += messageData.velocityY
+    // if ball touches top or bottom of canvas
+    if (ball.y <= 0 || ball.y + ball.height >= boardHeight) {
+        ball.velocityY *= -1 // reverse direction
+    }
+
+    // bounce the ball back
+    if (detectCollision(ball, player1)) {
+        if (ball.x <= player1.x! + player1.width) {
+            // left side of ball touches right side of player1
+            ball.velocityX *= -1 // flip x direction
+        }
+    } else if (detectCollision(ball, player2)) {
+        if (ball.x + ballWidth >= player2.x!) {
+            // rigth side of ball touches left side of player2
+            ball.velocityX *= -1
+        }
+    }
+    if (ball.x < 0) {
+        // player2Score++
+        resetGame(1)
+    } else if (ball.x + ballWidth > boardWidth) {
+        // player1Score++
+        resetGame(-1)
     }
 }
-*/
+
+const detectCollision = (ball: BallType, player: PlayerType): boolean => {
+    return (
+        ball.x < player.x! + player.width && // a's top left corner doesn't reach b's top right
+        // corner
+        ball.x + ball.width > player.x! && // a's top right corner passes b's top left corner
+        ball.y < player.y! + player.height && // a's top left corner doesn't reach b's bottom
+        // left corner
+        ball.y + ball.height > player.y! // a's bottom left corner passes b's top left corner
+    )
+}
+
+const resetGame = (direction: number): void => {
+    ball = { ...ballDefault, velocityX: direction }
+}
