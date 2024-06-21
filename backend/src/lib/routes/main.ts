@@ -111,6 +111,7 @@ export default (
                         }),
                     )
                 })
+                // TODO: send out a global ball state to all clients here?
             }
 
             socket.send(
@@ -124,17 +125,37 @@ export default (
             broadcastClientList()
 
             // TODO: send ball data here
+            let cachedData: string | undefined = undefined
             socket.on('message', (chunk: WebsocketHandler): void => {
-                clients.forEach((client: Client) => {
-                    // NOTE: Use if only want to see messages from other client
-                    // if (client.socket !== socket) {}
-                    client.socket.send(
-                        JSON.stringify({
-                            type: 'message',
-                            message: chunk.toString(),
-                        }),
-                    )
-                })
+                // NOTE: VERY hacky workaround that works (sort of)
+                // Ball now is jittery, but at proper speed, not sending ball data to each client "twice"
+                // TODO: Heavy refactor where ball data is sent here from server,
+                // and collision info is sent from client?
+                if (JSON.parse(chunk.toString()).type === 'ballType') {
+                    if (cachedData !== chunk.toString()) {
+                        cachedData = chunk.toString()
+                    } else {
+                        clients.forEach((client: Client) => {
+                            client.socket.send(
+                                JSON.stringify({
+                                    type: 'message',
+                                    message: chunk.toString(),
+                                }),
+                            )
+                        })
+                    }
+                } else {
+                    clients.forEach((client: Client) => {
+                        // NOTE: Use if only want to see messages from other client
+                        // if (client.socket !== socket) {}
+                        client.socket.send(
+                            JSON.stringify({
+                                type: 'message',
+                                message: chunk.toString(),
+                            }),
+                        )
+                    })
+                }
             })
             socket.on('close', (): void => {
                 clients.delete(clientId)
