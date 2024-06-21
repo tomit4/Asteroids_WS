@@ -141,7 +141,8 @@ const update = (): void => {
     // ball
     context.fillStyle = 'white'
     context.fillRect(ball.x, ball.y, ball.width, ball.height)
-    socket.send(JSON.stringify(ball))
+    // NOTE: sends clientId so no attempts to render ball per client
+    socket.send(JSON.stringify({ ...ball, clientId }))
 
     // score
     /*
@@ -208,7 +209,10 @@ socket.onmessage = (message): void => {
         const messageData = JSON.parse(data.message)
         if (messageData.type === 'playerType') {
             movePlayer(messageData)
-        } else if (messageData.type === 'ballType') {
+        } else if (
+            messageData.type === 'ballType' &&
+            messageData.clientId === clientId
+        ) {
             moveBall(messageData)
         }
     }
@@ -264,7 +268,7 @@ const moveBall = (messageData: BallType) => {
         }
     } else if (detectCollision(ball, player2)) {
         if (ball.x + ballWidth >= player2.x!) {
-            // rigth side of ball touches left side of player2
+            // right side of ball touches left side of player2
             ball.velocityX *= -1
         }
     }
