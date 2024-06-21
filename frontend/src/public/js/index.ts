@@ -141,8 +141,7 @@ const update = (): void => {
     // ball
     context.fillStyle = 'white'
     context.fillRect(ball.x, ball.y, ball.width, ball.height)
-    // NOTE: sends clientId so no attempts to render ball per client
-    socket.send(JSON.stringify({ ...ball, clientId }))
+    socket.send(JSON.stringify(ball))
 
     // score
     /*
@@ -209,10 +208,7 @@ socket.onmessage = (message): void => {
         const messageData = JSON.parse(data.message)
         if (messageData.type === 'playerType') {
             movePlayer(messageData)
-        } else if (
-            messageData.type === 'ballType' &&
-            messageData.clientId === clientId
-        ) {
+        } else if (messageData.type === 'ballType') {
             moveBall(messageData)
         }
     }

@@ -63,7 +63,7 @@ const update = () => {
     context.fillRect(player2.x, player2.y, player2.width, player2.height);
     context.fillStyle = 'white';
     context.fillRect(ball.x, ball.y, ball.width, ball.height);
-    socket.send(JSON.stringify(Object.assign(Object.assign({}, ball), { clientId })));
+    socket.send(JSON.stringify(ball));
     for (let i = 10; i < board.height; i += 25) {
         context.fillRect(board.width / 2 - 10, i, 5, 5);
     }
@@ -112,8 +112,7 @@ socket.onmessage = (message) => {
         if (messageData.type === 'playerType') {
             movePlayer(messageData);
         }
-        else if (messageData.type === 'ballType' &&
-            messageData.clientId === clientId) {
+        else if (messageData.type === 'ballType') {
             moveBall(messageData);
         }
     }
