@@ -135,14 +135,12 @@ export default (
                     if (cachedData !== chunk.toString()) {
                         cachedData = chunk.toString()
                     } else {
-                        clients.forEach((client: Client) => {
-                            client.socket.send(
-                                JSON.stringify({
-                                    type: 'message',
-                                    message: chunk.toString(),
-                                }),
-                            )
-                        })
+                        socket.send(
+                            JSON.stringify({
+                                type: 'message',
+                                message: chunk.toString(),
+                            }),
+                        )
                     }
                 } else {
                     clients.forEach((client: Client) => {

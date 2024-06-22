@@ -113,6 +113,7 @@ window.onload = (): void => {
     document.addEventListener('keydown', emitMoveEvent, false)
 }
 
+// TODO: split up the function to differentiate between player and ball animations
 const update = (): void => {
     requestAnimationFrame(update)
     context.clearRect(0, 0, board.width, board.height)
