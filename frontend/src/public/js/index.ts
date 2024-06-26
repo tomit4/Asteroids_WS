@@ -92,6 +92,15 @@ window.onload = async (): Promise<void> => {
     document.addEventListener('keydown', emitMoveEvent, false)
 }
 
+// NOTE: Perhaps some sort of logic like this would
+// allow you to update the animation via the backend entirely:
+// socket.onmessage = (message): void => {
+//    if (type === 'gameState') {
+//    // NOTE: All state that is touched in update() goes here...
+//    requestAnimationFrame(update)
+//    }
+// }
+
 // TODO: split up the function to differentiate between player and ball animations
 const update = (): void => {
     requestAnimationFrame(update)
