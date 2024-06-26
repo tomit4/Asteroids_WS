@@ -1,7 +1,9 @@
-// TODO: Heavy Refactor lengthy functions
-// and separate out canvas/clientlist/message functionality
-// TODO: Figure out how to reset game board if one player loses connection
-// NOTE: Buggy mess for now, but kind of works...
+/* NOTES:
+ * CONSTRUCTION: In the middle of refactor of more game state/logic on backend
+ * TODO: Move entire game state to backend, meaning all points of canvas, player movements,
+ * ball's current position should exist on the server and sent out to each client
+ * TODO: Replace all @ts-ignore and any with proper TS conventions
+ */
 import config from './config.js'
 const socket = new WebSocket(config.ws_main_addr as string)
 const yourId = document.getElementById('yourId') as HTMLSpanElement
@@ -22,8 +24,6 @@ socket.addEventListener('close', (): void => {
 // CANVAS
 const board = document.getElementById('board') as HTMLCanvasElement
 const context = board.getContext('2d') as CanvasRenderingContext2D
-// const boardWidth: number = 500
-// const boardHeight: number = 500
 
 // players
 let playerWidth: number = 0
@@ -55,48 +55,10 @@ type BallType = {
     velocityY: number
 }
 
-const playerDefaults: PlayerDefaultType = {
-    type: 'playerType',
-    id: null,
-    width: playerWidth,
-    height: playerHeight,
-    velocityY: playerVelocityY,
-    color: null,
-    direction: null,
-}
-
-// const player1Default: PlayerType = {
-// ...playerDefaults,
-// x: 10,
-// y: boardHeight / 2,
-// }
-
-// const player2Default: PlayerType = {
-// ...playerDefaults,
-// x: boardWidth - playerWidth - 10,
-// y: boardHeight / 2,
-// }
-
 let player1: any = null
 let player2: any = null
 
-// ball
 /*
-const ballWidth = 10
-const ballHeight = 10
-
-const ballDefault: BallType = {
-    type: 'ballType',
-    x: boardWidth / 2,
-    y: boardHeight / 2,
-    width: ballWidth,
-    height: ballHeight,
-    velocityX: 1,
-    velocityY: 2,
-}
-
-let ball: BallType = ballDefault
-
 let player1Score = 0
 let player2Score = 0
 */
@@ -108,9 +70,8 @@ socket.onmessage = (message): void => {
     if (type === 'id') clientId = id
     if (type === 'clients') updateClientList(clientList)
     if (type === 'gameState') {
-        console.log('gameState :=>', gameState)
-        board.height = gameState.board.height
         board.width = gameState.board.width
+        board.height = gameState.board.height
         playerWidth = gameState.playerDefaults.width
         playerHeight = gameState.playerDefaults.height
         playerVelocityY = gameState.playerDefaults.velocityY
@@ -138,9 +99,10 @@ const update = (): void => {
     context.fillStyle = 'skyblue'
 
     // player1
-    let nextPlayer1Y = player1.y ? player1.y + player1.velocityY : player1.y
-    if (!outOfBounds(nextPlayer1Y as number)) player1.y = nextPlayer1Y
     if (player1) {
+        // TODO: Move more game state to backend, detectCollision and outOfBounds
+        let nextPlayer1Y = player1.y ? player1.y + player1.velocityY : player1.y
+        if (!outOfBounds(nextPlayer1Y as number)) player1.y = nextPlayer1Y
         context.fillRect(
             player1.x as number,
             player1.y as number,
@@ -150,9 +112,10 @@ const update = (): void => {
     }
 
     // player2
-    let nextPlayer2Y = player2.y ? player2.y + player2.velocityY : player2.y
-    if (!outOfBounds(nextPlayer2Y as number)) player2.y = nextPlayer2Y
     if (player2) {
+        // TODO: Move more game state to backend, detectCollision and outOfBounds
+        let nextPlayer2Y = player2.y ? player2.y + player2.velocityY : player2.y
+        if (!outOfBounds(nextPlayer2Y as number)) player2.y = nextPlayer2Y
         context.fillRect(
             player2.x as number,
             player2.y as number,
@@ -175,77 +138,67 @@ const update = (): void => {
     */
 
     // draw dotted line down the middle
-    for (let i = 10; i < board.height; i += 25) {
-        // i = starting y position, draw a square every 25 pixels down
-        // (x position = half of boardWidth - 10) i = y position, width = 5, height
-        // = 5
-        context.fillRect(board.width / 2 - 10, i, 5, 5)
+    if (board.height && board.width) {
+        for (let i = 10; i < board.height; i += 25) {
+            // i = starting y position, draw a square every 25 pixels down
+            // (x position = half of boardWidth - 10) i = y position, width = 5, height
+            // = 5
+            context.fillRect(board.width / 2 - 10, i, 5, 5)
+        }
     }
 }
 
+// TODO: Move more game state to backend, detectCollision and outOfBounds
 const outOfBounds = (yPosition: number): boolean => {
     return yPosition < 0 || yPosition + playerHeight > board.height
 }
 
+// TODO: Massive cleanup
+// BUG: Colors mismatched
 const updateClientList = (clients: any[]): void => {
     localClientList = clients
-    console.log('clients :=>', clients)
-    console.log('clientId :=>', clientId)
-    /*
-    player1 = {
-        ...player1,
-        id: clients[0]?.player.id,
-        color: clients[0]?.player.color,
-    }
-    player2 = {
-        ...player2,
-        id: clients[1]?.player.id,
-        color: clients[1]?.player.color,
-    }
-    */
-
     if (clients.length !== 2) opponentId.innerText = ''
     // else resetGame(1)
     clients.forEach((client: any) => {
+        console.log(
+            'client.gameState.player1.id :=>',
+            client.gameState.player1.id,
+        )
+        console.log(
+            'client.gameState.player2.id :=>',
+            client.gameState.player2.id,
+        )
         const pTag = document.createElement('p') as HTMLParagraphElement
-        if (client.id !== clientId) {
-            pTag.style.backgroundColor = client.gameState.player2
-                .color as string
-            opponentId.innerText = ''
-            pTag.textContent = `Your Opponent is: ${client.id}`
-            opponentId.appendChild(pTag)
-        } else {
+        const pTag2 = document.createElement('p') as HTMLParagraphElement
+
+        if (clientId === client.gameState.player1.id) {
             pTag.style.backgroundColor = client.gameState.player1
                 .color as string
             yourId.innerText = ''
             pTag.textContent = `Your ID is: ${clientId}`
+            pTag2.style.backgroundColor = client.gameState.player2
+                .color as string
+            opponentId.innerText = ''
+            pTag2.textContent = `Your Opponent is: ${client.gameState.player2.id}`
             yourId.appendChild(pTag)
+            if (client.gameState.player2.id) opponentId.appendChild(pTag2)
+        } else {
+            pTag.style.backgroundColor = client.gameState.player2
+                .color as string
+            yourId.innerText = ''
+            pTag.textContent = `Your Id is: ${client.gameState.player2.id}`
+            pTag2.style.backgroundColor = client.gameState.player1
+                .color as string
+            opponentId.innerText = ''
+            pTag2.textContent = `Your Opponent is: ${client.gameState.player1.id}`
+            yourId.appendChild(pTag)
+            if (client.gameState.player1.id) opponentId.appendChild(pTag2)
+            opponentId.appendChild(pTag2)
         }
     })
 }
 /*
 socket.onmessage = (message): void => {
-    const data = JSON.parse(message.data)
-    if (data.type === 'id') {
-        clientId = data.id
-        console.log('clientId :=>', clientId)
-    }
-    if (data.type === 'clients') {
-        updateClientList(data.clients)
-        if (localClientList.length !== 2) {
-            player1 = player1Default
-            player2 = player2Default
-            resetGame(1)
-        }
-    }
-    if (data.type === 'message') {
-        const messageData = JSON.parse(data.message)
-        if (messageData.type === 'playerType') {
-            movePlayer(messageData)
-        } else if (messageData.type === 'ballType') {
-            moveBall(messageData)
-        }
-    }
     if (data.type === 'error') {
         const errMsg = document.createElement('p') as HTMLParagraphElement
         errMsg.textContent = data.message
@@ -271,18 +224,19 @@ const movePlayer = (playerData: PlayerType): void => {
     if (playerData.direction === 'ArrowUp') {
         if (localClientList[0].id === playerData.id) {
             player1.velocityY = -3
-        } else if (localClientList[1].id === playerData.id) {
+        } else if (localClientList[1]?.id === playerData.id) {
             player2.velocityY = -3
         }
     } else if (playerData.direction === 'ArrowDown') {
         if (localClientList[0].id === playerData.id) {
             player1.velocityY = 3
-        } else if (localClientList[1].id === playerData.id) {
+        } else if (localClientList[1]?.id === playerData.id) {
             player2.velocityY = 3
         }
     }
 }
 
+// TODO: Move more game state to backend, detectCollision and outOfBounds
 const moveBall = (messageData: BallType) => {
     ball.x += messageData.velocityX
     ball.y += messageData.velocityY

@@ -1,3 +1,4 @@
+// TODO: Replace all @ts-ignore and any with proper TS conventions
 import type {
     FastifyInstance,
     FastifyPluginOptions,
@@ -59,6 +60,13 @@ export default (
             }
             clients.set(clientId, client)
 
+            const clientList = Array.from(clients.values()).map(
+                (client: Client) => ({
+                    id: client.id,
+                    gameState,
+                }),
+            )
+
             if (clients.size > 2) {
                 socket.send(
                     JSON.stringify({
@@ -72,27 +80,40 @@ export default (
                 return
             }
 
-            const clientList = Array.from(clients.values()).map(
-                (client: Client) => ({
-                    id: client.id,
-                    gameState,
-                }),
-            )
-
-            // TODO: send out a global ball state to all clients here
+            // TODO: Doesn't actually broadcast anything...rename?
             const broadcastGameState = () => {
-                const { player1, player2 } = gameState
-                // @ts-ignore
-                player1.id = player1.id ? player1.id : clientList[0].id
-                // @ts-ignore
-                player1.color = player1.color ? player1.color : genRandomColor()
-                // @ts-ignore
-                player2.id = player2.id ? player2.id : clientList[0].id
-                // @ts-ignore
-                player2.color = player2.color ? player2.color : genRandomColor()
+                try {
+                    const { player1, player2 } = gameState
+                    // @ts-ignore
+                    player1.id = clientList[0]?.id ?? null
+                    // @ts-ignore
+                    player1.color = player1.color
+                        ? // @ts-ignore
+                          player1.color
+                        : genRandomColor()
+                    // @ts-ignore
+                    player2.id = clientList[1]?.id ?? null
+                    // @ts-ignore
+                    player2.color = player2.color
+                        ? // @ts-ignore
+                          player2.color
+                        : genRandomColor()
+                } catch (err) {
+                    console.error('ERROR :=>', err)
+                }
             }
 
             broadcastGameState()
+
+            // BUG: Laggy...
+            clients.forEach(client => {
+                client.socket.send(
+                    JSON.stringify({
+                        type: 'gameState',
+                        gameState,
+                    }),
+                )
+            })
 
             socket.send(
                 JSON.stringify({
@@ -101,19 +122,14 @@ export default (
                 }),
             )
 
-            socket.send(
-                JSON.stringify({
-                    type: 'clients',
-                    clientList,
-                }),
-            )
-
-            socket.send(
-                JSON.stringify({
-                    type: 'gameState',
-                    gameState,
-                }),
-            )
+            clients.forEach(client => {
+                client.socket.send(
+                    JSON.stringify({
+                        type: 'clients',
+                        clientList,
+                    }),
+                )
+            })
 
             socket.on('message', (chunk: WebsocketHandler): void => {
                 const { type } = JSON.parse(chunk.toString())
@@ -126,7 +142,6 @@ export default (
                         }),
                     )
                 }
-
                 if (type === 'playerType') {
                     clients.forEach(client => {
                         client.socket.send(
@@ -138,8 +153,10 @@ export default (
                     })
                 }
             })
+
             socket.on('close', (): void => {
                 clients.delete(clientId)
+                broadcastGameState()
                 if (clients.size === 0) socket.close()
             })
         },

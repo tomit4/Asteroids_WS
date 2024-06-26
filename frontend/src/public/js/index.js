@@ -25,15 +25,6 @@ const context = board.getContext('2d');
 let playerWidth = 0;
 let playerHeight = 0;
 let playerVelocityY = 0;
-const playerDefaults = {
-    type: 'playerType',
-    id: null,
-    width: playerWidth,
-    height: playerHeight,
-    velocityY: playerVelocityY,
-    color: null,
-    direction: null,
-};
 let player1 = null;
 let player2 = null;
 let ball = null;
@@ -44,9 +35,8 @@ socket.onmessage = (message) => {
     if (type === 'clients')
         updateClientList(clientList);
     if (type === 'gameState') {
-        console.log('gameState :=>', gameState);
-        board.height = gameState.board.height;
         board.width = gameState.board.width;
+        board.height = gameState.board.height;
         playerWidth = gameState.playerDefaults.width;
         playerHeight = gameState.playerDefaults.height;
         playerVelocityY = gameState.playerDefaults.velocityY;
@@ -70,16 +60,16 @@ const update = () => {
     requestAnimationFrame(update);
     context.clearRect(0, 0, board.width, board.height);
     context.fillStyle = 'skyblue';
-    let nextPlayer1Y = player1.y ? player1.y + player1.velocityY : player1.y;
-    if (!outOfBounds(nextPlayer1Y))
-        player1.y = nextPlayer1Y;
     if (player1) {
+        let nextPlayer1Y = player1.y ? player1.y + player1.velocityY : player1.y;
+        if (!outOfBounds(nextPlayer1Y))
+            player1.y = nextPlayer1Y;
         context.fillRect(player1.x, player1.y, player1.width, player1.height);
     }
-    let nextPlayer2Y = player2.y ? player2.y + player2.velocityY : player2.y;
-    if (!outOfBounds(nextPlayer2Y))
-        player2.y = nextPlayer2Y;
     if (player2) {
+        let nextPlayer2Y = player2.y ? player2.y + player2.velocityY : player2.y;
+        if (!outOfBounds(nextPlayer2Y))
+            player2.y = nextPlayer2Y;
         context.fillRect(player2.x, player2.y, player2.width, player2.height);
     }
     if (ball) {
@@ -87,8 +77,10 @@ const update = () => {
         context.fillStyle = 'white';
         context.fillRect(ball.x, ball.y, ball.width, ball.height);
     }
-    for (let i = 10; i < board.height; i += 25) {
-        context.fillRect(board.width / 2 - 10, i, 5, 5);
+    if (board.height && board.width) {
+        for (let i = 10; i < board.height; i += 25) {
+            context.fillRect(board.width / 2 - 10, i, 5, 5);
+        }
     }
 };
 const outOfBounds = (yPosition) => {
@@ -96,25 +88,39 @@ const outOfBounds = (yPosition) => {
 };
 const updateClientList = (clients) => {
     localClientList = clients;
-    console.log('clients :=>', clients);
-    console.log('clientId :=>', clientId);
     if (clients.length !== 2)
         opponentId.innerText = '';
     clients.forEach((client) => {
+        console.log('client.gameState.player1.id :=>', client.gameState.player1.id);
+        console.log('client.gameState.player2.id :=>', client.gameState.player2.id);
         const pTag = document.createElement('p');
-        if (client.id !== clientId) {
-            pTag.style.backgroundColor = client.gameState.player2
-                .color;
-            opponentId.innerText = '';
-            pTag.textContent = `Your Opponent is: ${client.id}`;
-            opponentId.appendChild(pTag);
-        }
-        else {
+        const pTag2 = document.createElement('p');
+        if (clientId === client.gameState.player1.id) {
             pTag.style.backgroundColor = client.gameState.player1
                 .color;
             yourId.innerText = '';
             pTag.textContent = `Your ID is: ${clientId}`;
+            pTag2.style.backgroundColor = client.gameState.player2
+                .color;
+            opponentId.innerText = '';
+            pTag2.textContent = `Your Opponent is: ${client.gameState.player2.id}`;
             yourId.appendChild(pTag);
+            if (client.gameState.player2.id)
+                opponentId.appendChild(pTag2);
+        }
+        else {
+            pTag.style.backgroundColor = client.gameState.player2
+                .color;
+            yourId.innerText = '';
+            pTag.textContent = `Your Id is: ${client.gameState.player2.id}`;
+            pTag2.style.backgroundColor = client.gameState.player1
+                .color;
+            opponentId.innerText = '';
+            pTag2.textContent = `Your Opponent is: ${client.gameState.player1.id}`;
+            yourId.appendChild(pTag);
+            if (client.gameState.player1.id)
+                opponentId.appendChild(pTag2);
+            opponentId.appendChild(pTag2);
         }
     });
 };
@@ -127,11 +133,12 @@ const emitMoveEvent = (e) => {
     }
 };
 const movePlayer = (playerData) => {
+    var _a, _b;
     if (playerData.direction === 'ArrowUp') {
         if (localClientList[0].id === playerData.id) {
             player1.velocityY = -3;
         }
-        else if (localClientList[1].id === playerData.id) {
+        else if (((_a = localClientList[1]) === null || _a === void 0 ? void 0 : _a.id) === playerData.id) {
             player2.velocityY = -3;
         }
     }
@@ -139,7 +146,7 @@ const movePlayer = (playerData) => {
         if (localClientList[0].id === playerData.id) {
             player1.velocityY = 3;
         }
-        else if (localClientList[1].id === playerData.id) {
+        else if (((_b = localClientList[1]) === null || _b === void 0 ? void 0 : _b.id) === playerData.id) {
             player2.velocityY = 3;
         }
     }
