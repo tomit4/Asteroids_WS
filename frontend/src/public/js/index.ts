@@ -8,12 +8,7 @@ const yourId = document.getElementById('yourId') as HTMLSpanElement
 const opponentId = document.getElementById('opponentId') as HTMLSpanElement
 const errMessages = document.getElementById('errMessages') as HTMLDivElement
 
-type ClientProfile = {
-    id: string | null
-    player: PlayerType
-}
-
-let localClientList: ClientProfile[] = []
+let localClientList: any[] = []
 let clientId: string | null = null
 
 socket.addEventListener('open', (): void => {
@@ -27,13 +22,13 @@ socket.addEventListener('close', (): void => {
 // CANVAS
 const board = document.getElementById('board') as HTMLCanvasElement
 const context = board.getContext('2d') as CanvasRenderingContext2D
-const boardWidth: number = 500
-const boardHeight: number = 500
+// const boardWidth: number = 500
+// const boardHeight: number = 500
 
 // players
-const playerWidth: number = 10
-const playerHeight: number = 50
-const playerVelocityY: number = 0
+let playerWidth: number = 0
+let playerHeight: number = 0
+let playerVelocityY: number = 0
 
 type PlayerDefaultType = {
     type: string
@@ -70,22 +65,23 @@ const playerDefaults: PlayerDefaultType = {
     direction: null,
 }
 
-const player1Default: PlayerType = {
-    ...playerDefaults,
-    x: 10,
-    y: boardHeight / 2,
-}
+// const player1Default: PlayerType = {
+// ...playerDefaults,
+// x: 10,
+// y: boardHeight / 2,
+// }
 
-const player2Default: PlayerType = {
-    ...playerDefaults,
-    x: boardWidth - playerWidth - 10,
-    y: boardHeight / 2,
-}
+// const player2Default: PlayerType = {
+// ...playerDefaults,
+// x: boardWidth - playerWidth - 10,
+// y: boardHeight / 2,
+// }
 
-let player1: PlayerType = player1Default
-let player2: PlayerType = player2Default
+let player1: any = null
+let player2: any = null
 
 // ball
+/*
 const ballWidth = 10
 const ballHeight = 10
 
@@ -101,14 +97,36 @@ const ballDefault: BallType = {
 
 let ball: BallType = ballDefault
 
-/*
 let player1Score = 0
 let player2Score = 0
 */
 
-window.onload = (): void => {
-    board.height = boardHeight
-    board.width = boardWidth
+let ball: any = null
+
+socket.onmessage = (message): void => {
+    const { type, id, clientList, gameState } = JSON.parse(message.data)
+    if (type === 'id') clientId = id
+    if (type === 'clients') updateClientList(clientList)
+    if (type === 'gameState') {
+        console.log('gameState :=>', gameState)
+        board.height = gameState.board.height
+        board.width = gameState.board.width
+        playerWidth = gameState.playerDefaults.width
+        playerHeight = gameState.playerDefaults.height
+        playerVelocityY = gameState.playerDefaults.velocityY
+        player1 = gameState.player1
+        player2 = gameState.player2
+        ball = gameState.ballState
+    }
+    if (type === 'ballState') moveBall(ball)
+    if (type === 'playerState') {
+        const data = JSON.parse(message.data)
+        const playerState = JSON.parse(data.playerState)
+        movePlayer(playerState)
+    }
+}
+
+window.onload = async (): Promise<void> => {
     requestAnimationFrame(update)
     document.addEventListener('keydown', emitMoveEvent, false)
 }
@@ -122,28 +140,33 @@ const update = (): void => {
     // player1
     let nextPlayer1Y = player1.y ? player1.y + player1.velocityY : player1.y
     if (!outOfBounds(nextPlayer1Y as number)) player1.y = nextPlayer1Y
-    context.fillRect(
-        player1.x as number,
-        player1.y as number,
-        player1.width,
-        player1.height,
-    )
+    if (player1) {
+        context.fillRect(
+            player1.x as number,
+            player1.y as number,
+            player1.width,
+            player1.height,
+        )
+    }
 
     // player2
     let nextPlayer2Y = player2.y ? player2.y + player2.velocityY : player2.y
     if (!outOfBounds(nextPlayer2Y as number)) player2.y = nextPlayer2Y
-    context.fillRect(
-        player2.x as number,
-        player2.y as number,
-        player2.width,
-        player2.height,
-    )
+    if (player2) {
+        context.fillRect(
+            player2.x as number,
+            player2.y as number,
+            player2.width,
+            player2.height,
+        )
+    }
 
     // ball
-    context.fillStyle = 'white'
-    context.fillRect(ball.x, ball.y, ball.width, ball.height)
-    socket.send(JSON.stringify(ball))
-
+    if (ball) {
+        socket.send(JSON.stringify(ball))
+        context.fillStyle = 'white'
+        context.fillRect(ball.x, ball.y, ball.width, ball.height)
+    }
     // score
     /*
     context.font = '45px sans-serif'
@@ -161,11 +184,14 @@ const update = (): void => {
 }
 
 const outOfBounds = (yPosition: number): boolean => {
-    return yPosition < 0 || yPosition + playerHeight > boardHeight
+    return yPosition < 0 || yPosition + playerHeight > board.height
 }
 
-const updateClientList = (clients: ClientProfile[]): void => {
+const updateClientList = (clients: any[]): void => {
     localClientList = clients
+    console.log('clients :=>', clients)
+    console.log('clientId :=>', clientId)
+    /*
     player1 = {
         ...player1,
         id: clients[0]?.player.id,
@@ -176,27 +202,34 @@ const updateClientList = (clients: ClientProfile[]): void => {
         id: clients[1]?.player.id,
         color: clients[1]?.player.color,
     }
+    */
 
     if (clients.length !== 2) opponentId.innerText = ''
-    else resetGame(1)
-    clients.forEach((client: ClientProfile) => {
+    // else resetGame(1)
+    clients.forEach((client: any) => {
         const pTag = document.createElement('p') as HTMLParagraphElement
-        pTag.style.backgroundColor = client.player.color as string
         if (client.id !== clientId) {
+            pTag.style.backgroundColor = client.gameState.player2
+                .color as string
             opponentId.innerText = ''
             pTag.textContent = `Your Opponent is: ${client.id}`
             opponentId.appendChild(pTag)
         } else {
+            pTag.style.backgroundColor = client.gameState.player1
+                .color as string
             yourId.innerText = ''
             pTag.textContent = `Your ID is: ${clientId}`
             yourId.appendChild(pTag)
         }
     })
 }
-
+/*
 socket.onmessage = (message): void => {
     const data = JSON.parse(message.data)
-    if (data.type === 'id') clientId = data.id
+    if (data.type === 'id') {
+        clientId = data.id
+        console.log('clientId :=>', clientId)
+    }
     if (data.type === 'clients') {
         updateClientList(data.clients)
         if (localClientList.length !== 2) {
@@ -221,11 +254,12 @@ socket.onmessage = (message): void => {
         socket.close()
     }
 }
+*/
 
 const emitMoveEvent = (e: KeyboardEvent): void => {
     if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
         e.preventDefault()
-        if (localClientList.length !== 2) return
+        // if (localClientList.length !== 2) return
         const playerData: PlayerType =
             player1.id === clientId ? player1 : player2
         playerData.direction = e.code
@@ -253,7 +287,7 @@ const moveBall = (messageData: BallType) => {
     ball.x += messageData.velocityX
     ball.y += messageData.velocityY
     // if ball touches top or bottom of canvas
-    if (ball.y <= 0 || ball.y + ball.height >= boardHeight) {
+    if (ball.y <= 0 || ball.y + ball.height >= board.height) {
         ball.velocityY *= -1 // reverse direction
     }
 
@@ -262,13 +296,16 @@ const moveBall = (messageData: BallType) => {
         if (ball.x <= player1.x! + player1.width) {
             // left side of ball touches right side of player1
             ball.velocityX *= -1 // flip x direction
+            socket.send(JSON.stringify(ball))
         }
     } else if (detectCollision(ball, player2)) {
-        if (ball.x + ballWidth >= player2.x!) {
+        if (ball.x + ball.width >= player2.x!) {
             // right side of ball touches left side of player2
             ball.velocityX *= -1
+            socket.send(JSON.stringify(ball))
         }
     }
+    /*
     if (ball.x < 0) {
         // player2Score++
         resetGame(1)
@@ -276,6 +313,7 @@ const moveBall = (messageData: BallType) => {
         // player1Score++
         resetGame(-1)
     }
+    */
 }
 
 const detectCollision = (ball: BallType, player: PlayerType): boolean => {
@@ -289,6 +327,6 @@ const detectCollision = (ball: BallType, player: PlayerType): boolean => {
     )
 }
 
-const resetGame = (direction: number): void => {
-    ball = { ...ballDefault, velocityX: direction }
-}
+// const resetGame = (direction: number): void => {
+// ball = { ...ballDefault, velocityX: direction }
+// }

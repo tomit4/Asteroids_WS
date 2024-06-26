@@ -7,22 +7,11 @@ import type {
 } from 'fastify'
 import type { WebSocket, WebsocketHandler } from '@fastify/websocket'
 import { nanoid } from 'nanoid'
+import gameState from '../models/game-state'
 
 type Client = {
     id: string
-    player: PlayerType
     socket: WebSocket
-}
-
-type PlayerType = {
-    id: string | null
-    x: number | null
-    y: number | null
-    width: number
-    height: number
-    velocityY: number
-    color: string | null
-    direction: string | null
 }
 
 const clients: Map<string, Client> = new Map()
@@ -62,95 +51,88 @@ export default (
         // TODO: Now create rooms where only two players are allowed
         // TODO: Wrap entire handler block in try/catch/finally witht throws
         wsHandler: (socket: WebSocket, _: FastifyRequest): void => {
-            const player: PlayerType = {
-                id: null,
-                x: null,
-                y: null,
-                width: 10,
-                height: 50,
-                velocityY: 0,
-                color: genRandomColor(),
-                direction: null,
-            }
-            player.id = null ?? nanoid()
-            const clientId: string | null = player.id
+            const clientId = nanoid()
 
             const client: Client = {
                 id: clientId,
-                player,
                 socket,
             }
             clients.set(clientId, client)
 
-            const broadcastClientList = (): void => {
-                // TODO: Handle this differently later on,
-                // have even number clients "pair off" into "rooms"
-                if (clients.size > 2) {
-                    socket.send(
-                        JSON.stringify({
-                            type: 'error',
-                            message:
-                                'Sorry, but no more than two players at a time. \
+            if (clients.size > 2) {
+                socket.send(
+                    JSON.stringify({
+                        type: 'error',
+                        message:
+                            'Sorry, but no more than two players at a time. \
                                 Please wait until someone else logs out.',
-                        }),
-                    )
-                    socket.close()
-                    return
-                }
-                const clientList = Array.from(clients.values()).map(
-                    (client: Client) => ({
-                        id: client.id,
-                        player: client.player,
                     }),
                 )
-                clients.forEach((client: Client) => {
-                    client.socket.send(
-                        JSON.stringify({
-                            type: 'clients',
-                            clients: clientList,
-                        }),
-                    )
-                })
+                socket.close()
+                return
             }
 
+            const clientList = Array.from(clients.values()).map(
+                (client: Client) => ({
+                    id: client.id,
+                    gameState,
+                }),
+            )
+
             // TODO: send out a global ball state to all clients here
-            // const broadcastGameState = () => {}
+            const broadcastGameState = () => {
+                const { player1, player2 } = gameState
+                // @ts-ignore
+                player1.id = player1.id ? player1.id : clientList[0].id
+                // @ts-ignore
+                player1.color = player1.color ? player1.color : genRandomColor()
+                // @ts-ignore
+                player2.id = player2.id ? player2.id : clientList[0].id
+                // @ts-ignore
+                player2.color = player2.color ? player2.color : genRandomColor()
+            }
+
+            broadcastGameState()
 
             socket.send(
                 JSON.stringify({
                     type: 'id',
                     id: clientId,
-                    player,
                 }),
             )
 
-            broadcastClientList()
+            socket.send(
+                JSON.stringify({
+                    type: 'clients',
+                    clientList,
+                }),
+            )
 
-            let cachedData: string | undefined = undefined
+            socket.send(
+                JSON.stringify({
+                    type: 'gameState',
+                    gameState,
+                }),
+            )
+
             socket.on('message', (chunk: WebsocketHandler): void => {
-                // NOTE: VERY hacky workaround that works (sort of)
-                // Ball now is jittery, but at proper speed, not sending ball data to each client "twice"
-                // TODO: Heavy refactor where ball data is sent here from server,
-                // and collision info is sent from client?
-                if (JSON.parse(chunk.toString()).type === 'ballType') {
-                    if (cachedData !== chunk.toString()) {
-                        cachedData = chunk.toString()
-                    } else {
-                        socket.send(
-                            JSON.stringify({
-                                type: 'message',
-                                message: chunk.toString(),
-                            }),
-                        )
-                    }
-                } else {
-                    clients.forEach((client: Client) => {
-                        // NOTE: Use if only want to see messages from other client
-                        // if (client.socket !== socket) {}
+                const { type } = JSON.parse(chunk.toString())
+                if (type === 'ballType') {
+                    gameState.ballState = JSON.parse(chunk.toString())
+                    socket.send(
+                        JSON.stringify({
+                            type: 'ballState',
+                            ballState: gameState.ballState,
+                        }),
+                    )
+                }
+
+                if (type === 'playerType') {
+                    clients.forEach(client => {
                         client.socket.send(
                             JSON.stringify({
-                                type: 'message',
-                                message: chunk.toString(),
+                                type: 'playerState',
+                                playerState: chunk.toString(),
                             }),
                         )
                     })
@@ -158,7 +140,6 @@ export default (
             })
             socket.on('close', (): void => {
                 clients.delete(clientId)
-                broadcastClientList()
                 if (clients.size === 0) socket.close()
             })
         },

@@ -1,3 +1,12 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import config from './config.js';
 const socket = new WebSocket(config.ws_main_addr);
 const yourId = document.getElementById('yourId');
@@ -13,11 +22,9 @@ socket.addEventListener('close', () => {
 });
 const board = document.getElementById('board');
 const context = board.getContext('2d');
-const boardWidth = 500;
-const boardHeight = 500;
-const playerWidth = 10;
-const playerHeight = 50;
-const playerVelocityY = 0;
+let playerWidth = 0;
+let playerHeight = 0;
+let playerVelocityY = 0;
 const playerDefaults = {
     type: 'playerType',
     id: null,
@@ -27,28 +34,38 @@ const playerDefaults = {
     color: null,
     direction: null,
 };
-const player1Default = Object.assign(Object.assign({}, playerDefaults), { x: 10, y: boardHeight / 2 });
-const player2Default = Object.assign(Object.assign({}, playerDefaults), { x: boardWidth - playerWidth - 10, y: boardHeight / 2 });
-let player1 = player1Default;
-let player2 = player2Default;
-const ballWidth = 10;
-const ballHeight = 10;
-const ballDefault = {
-    type: 'ballType',
-    x: boardWidth / 2,
-    y: boardHeight / 2,
-    width: ballWidth,
-    height: ballHeight,
-    velocityX: 1,
-    velocityY: 2,
+let player1 = null;
+let player2 = null;
+let ball = null;
+socket.onmessage = (message) => {
+    const { type, id, clientList, gameState } = JSON.parse(message.data);
+    if (type === 'id')
+        clientId = id;
+    if (type === 'clients')
+        updateClientList(clientList);
+    if (type === 'gameState') {
+        console.log('gameState :=>', gameState);
+        board.height = gameState.board.height;
+        board.width = gameState.board.width;
+        playerWidth = gameState.playerDefaults.width;
+        playerHeight = gameState.playerDefaults.height;
+        playerVelocityY = gameState.playerDefaults.velocityY;
+        player1 = gameState.player1;
+        player2 = gameState.player2;
+        ball = gameState.ballState;
+    }
+    if (type === 'ballState')
+        moveBall(ball);
+    if (type === 'playerState') {
+        const data = JSON.parse(message.data);
+        const playerState = JSON.parse(data.playerState);
+        movePlayer(playerState);
+    }
 };
-let ball = ballDefault;
-window.onload = () => {
-    board.height = boardHeight;
-    board.width = boardWidth;
+window.onload = () => __awaiter(void 0, void 0, void 0, function* () {
     requestAnimationFrame(update);
     document.addEventListener('keydown', emitMoveEvent, false);
-};
+});
 const update = () => {
     requestAnimationFrame(update);
     context.clearRect(0, 0, board.width, board.height);
@@ -56,79 +73,54 @@ const update = () => {
     let nextPlayer1Y = player1.y ? player1.y + player1.velocityY : player1.y;
     if (!outOfBounds(nextPlayer1Y))
         player1.y = nextPlayer1Y;
-    context.fillRect(player1.x, player1.y, player1.width, player1.height);
+    if (player1) {
+        context.fillRect(player1.x, player1.y, player1.width, player1.height);
+    }
     let nextPlayer2Y = player2.y ? player2.y + player2.velocityY : player2.y;
     if (!outOfBounds(nextPlayer2Y))
         player2.y = nextPlayer2Y;
-    context.fillRect(player2.x, player2.y, player2.width, player2.height);
-    context.fillStyle = 'white';
-    context.fillRect(ball.x, ball.y, ball.width, ball.height);
-    socket.send(JSON.stringify(ball));
+    if (player2) {
+        context.fillRect(player2.x, player2.y, player2.width, player2.height);
+    }
+    if (ball) {
+        socket.send(JSON.stringify(ball));
+        context.fillStyle = 'white';
+        context.fillRect(ball.x, ball.y, ball.width, ball.height);
+    }
     for (let i = 10; i < board.height; i += 25) {
         context.fillRect(board.width / 2 - 10, i, 5, 5);
     }
 };
 const outOfBounds = (yPosition) => {
-    return yPosition < 0 || yPosition + playerHeight > boardHeight;
+    return yPosition < 0 || yPosition + playerHeight > board.height;
 };
 const updateClientList = (clients) => {
-    var _a, _b, _c, _d;
     localClientList = clients;
-    player1 = Object.assign(Object.assign({}, player1), { id: (_a = clients[0]) === null || _a === void 0 ? void 0 : _a.player.id, color: (_b = clients[0]) === null || _b === void 0 ? void 0 : _b.player.color });
-    player2 = Object.assign(Object.assign({}, player2), { id: (_c = clients[1]) === null || _c === void 0 ? void 0 : _c.player.id, color: (_d = clients[1]) === null || _d === void 0 ? void 0 : _d.player.color });
+    console.log('clients :=>', clients);
+    console.log('clientId :=>', clientId);
     if (clients.length !== 2)
         opponentId.innerText = '';
-    else
-        resetGame(1);
     clients.forEach((client) => {
         const pTag = document.createElement('p');
-        pTag.style.backgroundColor = client.player.color;
         if (client.id !== clientId) {
+            pTag.style.backgroundColor = client.gameState.player2
+                .color;
             opponentId.innerText = '';
             pTag.textContent = `Your Opponent is: ${client.id}`;
             opponentId.appendChild(pTag);
         }
         else {
+            pTag.style.backgroundColor = client.gameState.player1
+                .color;
             yourId.innerText = '';
             pTag.textContent = `Your ID is: ${clientId}`;
             yourId.appendChild(pTag);
         }
     });
 };
-socket.onmessage = (message) => {
-    const data = JSON.parse(message.data);
-    if (data.type === 'id')
-        clientId = data.id;
-    if (data.type === 'clients') {
-        updateClientList(data.clients);
-        if (localClientList.length !== 2) {
-            player1 = player1Default;
-            player2 = player2Default;
-            resetGame(1);
-        }
-    }
-    if (data.type === 'message') {
-        const messageData = JSON.parse(data.message);
-        if (messageData.type === 'playerType') {
-            movePlayer(messageData);
-        }
-        else if (messageData.type === 'ballType') {
-            moveBall(messageData);
-        }
-    }
-    if (data.type === 'error') {
-        const errMsg = document.createElement('p');
-        errMsg.textContent = data.message;
-        errMsg.classList.add('errMsg');
-        errMessages.appendChild(errMsg);
-        socket.close();
-    }
-};
 const emitMoveEvent = (e) => {
     if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
         e.preventDefault();
-        if (localClientList.length !== 2)
-            return;
         const playerData = player1.id === clientId ? player1 : player2;
         playerData.direction = e.code;
         socket.send(JSON.stringify(playerData));
@@ -155,24 +147,20 @@ const movePlayer = (playerData) => {
 const moveBall = (messageData) => {
     ball.x += messageData.velocityX;
     ball.y += messageData.velocityY;
-    if (ball.y <= 0 || ball.y + ball.height >= boardHeight) {
+    if (ball.y <= 0 || ball.y + ball.height >= board.height) {
         ball.velocityY *= -1;
     }
     if (detectCollision(ball, player1)) {
         if (ball.x <= player1.x + player1.width) {
             ball.velocityX *= -1;
+            socket.send(JSON.stringify(ball));
         }
     }
     else if (detectCollision(ball, player2)) {
-        if (ball.x + ballWidth >= player2.x) {
+        if (ball.x + ball.width >= player2.x) {
             ball.velocityX *= -1;
+            socket.send(JSON.stringify(ball));
         }
-    }
-    if (ball.x < 0) {
-        resetGame(1);
-    }
-    else if (ball.x + ballWidth > boardWidth) {
-        resetGame(-1);
     }
 };
 const detectCollision = (ball, player) => {
@@ -180,7 +168,4 @@ const detectCollision = (ball, player) => {
         ball.x + ball.width > player.x &&
         ball.y < player.y + player.height &&
         ball.y + ball.height > player.y);
-};
-const resetGame = (direction) => {
-    ball = Object.assign(Object.assign({}, ballDefault), { velocityX: direction });
 };
