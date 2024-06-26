@@ -111,8 +111,10 @@ export default (
                         }),
                     )
                 })
-                // TODO: send out a global ball state to all clients here?
             }
+
+            // TODO: send out a global ball state to all clients here
+            // const broadcastGameState = () => {}
 
             socket.send(
                 JSON.stringify({
@@ -124,7 +126,6 @@ export default (
 
             broadcastClientList()
 
-            // TODO: send ball data here
             let cachedData: string | undefined = undefined
             socket.on('message', (chunk: WebsocketHandler): void => {
                 // NOTE: VERY hacky workaround that works (sort of)
